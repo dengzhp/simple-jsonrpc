@@ -1,5 +1,5 @@
 # wsgi jsonrpc handler example
-import jsonrpc
+import simplejsonrpc as jsonrpc
 
 def add(a, b):
     return a + b
