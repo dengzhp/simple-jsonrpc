@@ -58,6 +58,7 @@ wsgi handler example:
 Installation
 ------------
 You can install this from PyPI with the following command:
+
 	pip install simple-jsonrpc
 
 
