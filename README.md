@@ -6,7 +6,7 @@ A python library of JSON-RPC v2.0 specification.
 Client Usage
 ------------
 
-	import simplejsonrpc as jsonrpc
+	import jsonrpc
 
 	server = jsonrpc.Server("http://localhost:6996/rpc")
 	print server.test_add(23, 3)
@@ -18,7 +18,7 @@ Server
 
 wsgi handler example:
 
-	import simplejsonrpc as jsonrpc
+	import jsonrpc
 
 	def add(a, b):
 	    return a + b
@@ -60,7 +60,5 @@ Installation
 You can install this from PyPI with the following command:
 
 	pip install simple-jsonrpc
-
-
 
 
