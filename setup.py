@@ -3,7 +3,7 @@ import distutils.core
 
 distutils.core.setup(
     name = "simple-jsonrpc",
-    version = "0.1",
+    version = "0.2",
     py_modules = ["jsonrpc"],
     author = "Deng Zhiping",
     author_email = "kofreestyler@gmail.com",
