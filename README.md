@@ -6,19 +6,19 @@ A python library of JSON-RPC v2.0 specification.
 Client Usage
 ------------
 
-	import jsonrpc
+	import simplejsonrpc as jsonrpc
 
-	server = jsonrpc.Server("http://localhost:6996/rpc")
-	print server.test_add(23, 3)
+	server = jsonrpc.Server("http://localhost:8000/rpc")
+	print server.add(23, 3)
 	print server.foo()
 
 
 Server
 ------
 
-wsgi handler example:
+wsgi server example:
 
-	import jsonrpc
+	import simplejsonrpc as jsonrpc
 
 	def add(a, b):
 	    return a + b
@@ -53,6 +53,11 @@ wsgi handler example:
 
 	    start_response("200 OK", [])
 	    return [result]
+
+    from wsgiref.simple_server import make_server
+    rpcserver = make_server('', 8000, application)
+    print "Serving on port 8000..."
+    rpcserver.serve_forever()
 
 
 Installation

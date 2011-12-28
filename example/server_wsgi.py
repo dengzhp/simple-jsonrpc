@@ -1,5 +1,5 @@
 # wsgi jsonrpc handler example
-import jsonrpc
+import simplejsonrpc as jsonrpc
 
 def add(a, b):
     return a + b
@@ -34,3 +34,9 @@ def application(environ, start_response):
 
     start_response("200 OK", [])
     return [result]
+
+
+from wsgiref.simple_server import make_server
+rpcserver = make_server('', 8000, application)
+print "Serving on port 8000..."
+rpcserver.serve_forever()

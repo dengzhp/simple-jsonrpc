@@ -1,6 +1,6 @@
-import jsonrpc
+import simplejsonrpc as jsonrpc
 
-server = jsonrpc.Server("http://localhost:6996/rpc")
-print server.test_add(23, 3)
+server = jsonrpc.Server("http://localhost:8000/rpc")
+print server.add(23, 3)
 print server.foo()
 
