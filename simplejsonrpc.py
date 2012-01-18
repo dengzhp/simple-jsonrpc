@@ -9,11 +9,13 @@
 
 import socket
 import sys
-from httplib import HTTPConnection
+import httplib
 import types
 import string
 import random
 import traceback
+
+__version__ = "0.3.2"
 
 # JSON library importing
 json = None
@@ -39,52 +41,73 @@ class ProtocolError(Exception):
     pass
 
 
-class HTTPConnection2(HTTPConnection):
+def _create_connection(address, timeout=None):
+    """extract from Lib/socket.py"""
+    msg = "getaddrinfo returns an empty list"
+    host, port = address
+    for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
+        af, socktype, proto, canonname, sa = res
+        sock = None
+        try:
+            sock = socket.socket(af, socktype, proto)
+            if timeout is not None:
+                sock.settimeout(timeout)
+            sock.connect(sa)
+            return sock
+
+        except error, msg:
+            if sock is not None:
+                sock.close()
+
+    raise error, msg
+
+
+class HTTPConnection2(httplib.HTTPConnection):
     """add timeout to HTTPConnection for python2.5"""
     def __init__(self, host, port=None, strict=None, timeout=None):
         self.timeout = timeout
-        HTTPConnection.__init__(self, host, port, strict)
+        httplib.HTTPConnection.__init__(self, host, port, strict)
 
     def connect(self):
         """Connect to the host and port specified in __init__."""
-        msg = "getaddrinfo returns an empty list"
-        for res in socket.getaddrinfo(self.host, self.port, 0,
-                                      socket.SOCK_STREAM):
-            af, socktype, proto, canonname, sa = res
-            try:
-                self.sock = socket.socket(af, socktype, proto)
-                if self.timeout is not None:
-                    self.sock.settimeout(self.timeout)
-                if self.debuglevel > 0:
-                    print "connect: (%s, %s)" % (self.host, self.port)
-                self.sock.connect(sa)
-            except socket.error, msg:
-                if self.debuglevel > 0:
-                    print 'connect fail:', (self.host, self.port)
-                if self.sock:
-                    self.sock.close()
-                self.sock = None
-                continue
-            break
-        if not self.sock:
-            raise socket.error, msg
+        self.sock = _create_connection((self.host, self.port),
+                                       self.timeout)
+
+class HTTPSConnection2(httplib.HTTPSConnection):
+    """add timeout to HTTPSConnection for python2.5"""
+    def __init__(self, host, port=None, key_file=None, cert_file=None,
+                 strict=None, timeout=None):
+        self.timeout = timeout
+        httplib.HTTPSConnection.__init__(self, host, port, key_file, cert_file, strict)
+
+    def connect(self):
+        sock = _create_connection((self.host, self.port), self.timeout)
+        ssl = socket.ssl(sock, self.key_file, self.cert_file)
+        self.sock = httplib.FakeSocket(sock, ssl)
 
 
 class Transport:
-    def __init__(self, host, timeout=None):
+    def __init__(self, host, timeout=None, safe=False):
         self.host = host
         self.timeout = timeout
+        self.safe = safe
 
     def request(self, handler, request_body):
         if sys.version_info > (2, 6) or self.timeout is None:
-            HttpClass = HTTPConnection
+            if self.safe:
+                cls = httplib.HTTPSConnection
+            else:
+                cls = httplib.HTTPConnection
         else:
-            HttpClass = HTTPConnection2
+            if self.safe:
+                cls = HTTPSConnection2
+            else:
+                cls = HTTPConnection2
 
         if self.timeout is None:
-            c = HttpClass(self.host)
+            c = cls(self.host)
         else:
-            c = HttpClass(self.host, timeout=self.timeout)
+            c = cls(self.host, timeout=self.timeout)
         c.request('POST', handler, request_body)
 
         r = c.getresponse()
@@ -136,14 +159,17 @@ class ServerProxy:
         import urllib
 
         schema, uri = urllib.splittype(uri)
-        if schema != 'http':
+        if schema not in ('http', 'https'):
             raise IOError('Unsupported JSON-RPC protocol.')
         self.__host, self.__handler = urllib.splithost(uri)
         if not self.__handler:
             #raise Exception?
             self.__handler = '/'
 
-        self.__transport = Transport(self.__host, timeout=timeout)
+        if schema == 'https':
+            self.__transport = Transport(self.__host, timeout=timeout, safe=True)
+        else:
+            self.__transport = Transport(self.__host, timeout=timeout)
         self.__encoding = encoding
 
     def __str__(self):
