@@ -1,11 +1,8 @@
-# http://groups.google.com/group/json-rpc/web/json-rpc-2-0
-# JSON-RPC 2.0 Specification
-# Date:	2010-03-26 (based on the 2009-05-24 version)
-#
+# http://jsonrpc.org/spec.html
 # Homepage: https://github.com/dengzhp/simple-jsonrpc
 #
 #TODO:
-#      multicall
+#      batch requests
 
 import socket
 import sys
@@ -15,7 +12,7 @@ import string
 import random
 import traceback
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 
 # JSON library importing
 json = None
@@ -212,19 +209,23 @@ def random_id(length=8):
     return return_id
 
 
+_ERROR_ID = object()
+
 def dumps(params=[], methodname=None, methodresponse=False,
           encoding='utf-8', rpcid=None, notify=None, error=False):
 
     s = {"jsonrpc": "2.0"}
 
     if methodresponse:
-        if rpcid is None and not error:
+        if rpcid is None:
             raise ValueError('A method response must have an rpcid.')
 
         if not error:
             s["result"] = params
         else:
             s["error"] = params
+        if rpcid == _ERROR_ID:
+            rpcid == None
         s["id"] = rpcid
         return jdumps(s, encoding=encoding)
 
@@ -275,6 +276,9 @@ def check_for_errors(result):
 
 
 class JsonrpcHandler:
+    def __init__(self):
+        self._rpcid = _ERROR_ID
+        self.notify = False
 
     def dispatch(self, method_name):
         """Please overwrite me!! return a function"""
@@ -288,7 +292,11 @@ class JsonrpcHandler:
             return False
 
         self._method = self._request.get("method", None)
-        self._rpcid = self._request.get("id", None)
+        rpcid = self._request.get("id", None)
+        if rpcid is None:
+            self.notify = True
+        else:
+            self._rpcid = rpcid
         self._params = self._request.get("params", [])
 
         param_types = (types.ListType, types.DictType, types.TupleType)
@@ -302,16 +310,16 @@ class JsonrpcHandler:
             self._request = loads(request)
         except Exception, e:
             err = error(-32700, "Parse error")
-            return dumps(params=err, methodresponse=True, error=True)
+            return dumps(params=err, methodresponse=True, rpcid=self._rpcid, error=True)
 
         if not self._validate_request():
             err = error(-32600, "Invalid Request")
-            return dumps(params=err, methodresponse=True, error=True)
+            return dumps(params=err, methodresponse=True, rpcid=self._rpcid, error=True)
 
         func = self.dispatch(self._method)
         if not func:
             err = error(-32601, "Method not found")
-            return dumps(params=err, methodresponse=True, error=True)
+            return dumps(params=err, methodresponse=True, rpcid=self._rpcid, error=True)
 
         try:
             if type(self._params) is types.ListType:
@@ -320,13 +328,13 @@ class JsonrpcHandler:
                 result = func(**self._params)
         except TypeError:
             err = error(-32602, "Invalid params")
-            return dumps(params=err, methodresponse=True, error=True)
+            return dumps(params=err, methodresponse=True, rpcid=self._rpcid, error=True)
         except:
             err_lines = traceback.format_exc().splitlines()
             trace_string = '%s | %s' % (err_lines[-3], err_lines[-1])
 
             err = error(-32603, "Internal error: %s" % trace_string)
-            return dumps(params=err, methodresponse=True, error=True)
+            return dumps(params=err, methodresponse=True, rpcid=self._rpcid, error=True)
 
         return dumps(params=result, methodresponse=True, rpcid=self._rpcid)
 
