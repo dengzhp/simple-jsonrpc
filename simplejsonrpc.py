@@ -12,7 +12,7 @@ import string
 import random
 import traceback
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 # JSON library importing
 json = None
@@ -337,4 +337,3 @@ class JsonrpcHandler:
             return dumps(params=err, methodresponse=True, rpcid=self._rpcid, error=True)
 
         return dumps(params=result, methodresponse=True, rpcid=self._rpcid)
-
