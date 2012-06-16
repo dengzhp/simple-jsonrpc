@@ -225,7 +225,7 @@ def dumps(params=[], methodname=None, methodresponse=False,
         else:
             s["error"] = params
         if rpcid == _ERROR_ID:
-            rpcid == None
+            rpcid = None
         s["id"] = rpcid
         return jdumps(s, encoding=encoding)
 
